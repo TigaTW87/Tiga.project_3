@@ -1,0 +1,93 @@
+// Set up states
+const IDLE = 0
+const DANGER = 1
+const UNLOCK = 2
+
+//Set up initial state and variables
+let state = IDLE
+let lightValue = 0
+let distanceValue = 0
+let strip = neopixel.create(DigitalPin.P2, 8, NeoPixelMode.RGB)
+
+function updateSystem() {
+    lightValue = input.lightLevel()
+    if (pins.analogReadPin(AnalogPin.P0) == 255){
+        // The sensor keeps sending this number randomly
+        // So I want to keep it out 
+        
+    }else {
+        distanceValue = pins.analogReadPin(AnalogPin.P0)
+    }
+}
+
+function evaluateState(state:number) {
+    if (state == DANGER && lightValue >= 90 && distanceValue <= 600){
+        state = IDLE
+    }
+
+    if(state == IDLE && lightValue < 90 && distanceValue > 600){
+        state = DANGER
+    }
+
+    if (input.buttonIsPressed(Button.A)){
+        state = UNLOCK
+    }
+    
+    if (state == UNLOCK && input.buttonIsPressed(Button.B)){
+        state = IDLE
+    }
+    return state
+}
+
+function dangerReact(){
+    //
+    strip.showColor(neopixel.colors(NeoPixelColors.Blue))
+    basic.pause(10)
+    strip.showColor(neopixel.colors(NeoPixelColors.Red))
+    pins.servoWritePin(AnalogPin.P3, 90)
+    
+}
+
+function unlockReact(){
+    //
+    strip.showColor(neopixel.colors(NeoPixelColors.Green))
+    pins.servoWritePin(AnalogPin.P3, 0)
+}
+
+function idleReact(){
+    //
+    strip.showColor(neopixel.colors(NeoPixelColors.White))
+    pins.servoWritePin(AnalogPin.P3, 0)
+}
+function reactToState(state:number){
+    switch(state){
+        case DANGER:
+            //
+            dangerReact()
+
+            break;
+        case UNLOCK:
+            //
+            unlockReact()
+
+            break;
+        case IDLE:
+            //
+            idleReact()
+
+    }
+}
+
+
+function testSignal(){
+    serial.writeLine("Light: " + lightValue.toString())
+    serial.writeLine("Distance: " + distanceValue.toString())
+    serial.writeLine("State: " + state.toString())
+
+}
+basic.forever(function () {
+	updateSystem()
+    state = evaluateState(state)
+    reactToState(state)
+    testSignal()
+})
